@@ -22,7 +22,7 @@ from pvlib.snow import loss_townsend
 
 st.set_page_config(page_title="Solar PV Performance Loss", page_icon="❄️", layout="wide")
 
-st.title("Solar PV Performance Loss Calculator: Snow & Soiling (Monthly)")
+st.title("Solar PV Performance Loss Model: Snow & Soiling (Monthly)")
 
 # --- Hero image (half size) just below the title ---
 from pathlib import Path
