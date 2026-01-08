@@ -57,6 +57,11 @@ st.markdown(
     "monthly loss percentages one can use in EPC financials and O&M planning."
 )
 
+st.markdown(
+    "Reference used Townsend, T., & Powers, L. (2011). Photovoltaics and snow: An update from" 
+    "two winters of measurements in the Sierra In 37th IEEE Photovoltaic Specialists Conference (pp. 003231–003236). IEEE." 
+    "https://doi.org/10.1109/PVSC.2011.6186627"
+)
 st.markdown("""
     <style>
       .attrib { font-size: 1.5rem; line-height: 1.8; opacity: 0.9; }
