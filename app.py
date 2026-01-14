@@ -57,11 +57,16 @@ st.markdown(
     "monthly loss percentages one can use in EPC financials and O&M planning."
 )
 
-st.markdown(
-    "Reference: Townsend, T., & Powers, L. (2011). Photovoltaics and snow: An update from" 
-    "two winters of measurements in the Sierra In 37th IEEE Photovoltaic Specialists Conference (pp. 003231–003236). IEEE. " 
-    "https://doi.org/10.1109/PVSC.2011.6186627"
-)
+st.markdown("### References")
+
+st.markdown("""
+1. Townsend, Tim & Powers, Loren. (2011). *Photovoltaics and snow: An update from two winters of measurements in the SIERRA.* 37th IEEE Photovoltaic Specialists Conference, Seattle, WA, USA. DOI: 10.1109/PVSC.2011.6186627
+
+2. Townsend, T. and Previtali, J. (2023). *A Fresh Dusting: Current Uses of the Townsend Snow Model.* In “Photovoltaic Reliability Workshop (PVRW) 2023 Proceedings: Posters.”, ed. Silverman, T. J. Dec. 2023. NREL/CP-5900-87918. Available at: https://www.nrel.gov/docs/fy25osti/90585.pdf
+
+3. Townsend, T. (2013). *Predicting PV Energy Loss Caused by Snow.* Solar Power International, Chicago IL. DOI: 10.13140/RG.2.2.14299.68647
+""")
+
 st.markdown("""
     <style>
       .attrib { font-size: 1.5rem; line-height: 1.8; opacity: 0.9; }
@@ -313,7 +318,13 @@ with c3:
     st.session_state["geo_lower_m"] = unit_to_m(lower_edge_height_disp, geom_unit)
     st.session_state["lower_display"] = lower_edge_height_disp
 with c4:
-    string_factor = st.number_input("String factor", min_value=0.1, value=1.0, step=0.1)
+    string_factor = st.radio(
+    "String factor",
+    options=[1.0, 0.75],
+    index=0,
+    horizontal=True,
+    help="Allowed values are 1.0 or 0.75."
+)
 
 # --- Vertical POA editor (12 rows, no extras) ---
 st.markdown(f"**POA_global ({POA_UNIT}) — enter 12 monthly values**")
