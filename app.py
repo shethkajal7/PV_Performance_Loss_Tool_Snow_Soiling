@@ -83,9 +83,6 @@ st.markdown("""
       .attrib { font-size: 1.5rem; line-height: 1.8; opacity: 0.9; }
     </style>
 """, unsafe_allow_html=True)
-st.markdown('<p class="attrib">This webpage was created by <b>Sheth Kajal</b> 😊</p>',
-            unsafe_allow_html=True)
-
 MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
 MONTH_ORDER = {m: i for i, m in enumerate(MONTHS, start=1)}
 POA_UNIT = "kWh/m²-month"  # display unit for user entry
@@ -550,3 +547,5 @@ st.markdown("""
 
 3. Townsend, T. (2013). *Predicting PV Energy Loss Caused by Snow.* Solar Power International, Chicago IL. DOI: 10.13140/RG.2.2.14299.68647
 """)
+st.markdown('<p class="attrib">This webpage was created by <b>Sheth Kajal</b> 😊</p>',
+            unsafe_allow_html=True)
