@@ -45,6 +45,70 @@ st.markdown(
     "_Townsend snow loss (via pvlib) + precipitation-aware soiling model using monthly "
     "climate inputs (manual-clean option); month-by-month results to support EPC yield "
     "estimates and O&M cleaning plans._"
+
+    st.subheader("How to Use the PV Snow & Soiling Loss Calculator")
+
+with st.expander("📘 Step-by-step instructions (click to expand)", expanded=False):
+    st.markdown("""
+**Step 1 – Open the Tool**  
+Go to the web address above in any modern browser (Chrome, Firefox, Edge, Safari).  
+You will see a page titled **Solar PV Performance Loss Modelling Application: Snow & Soiling (Monthly)**.
+
+**Step 2 – Provide Climate and System Inputs**
+
+**A) Choose Units**  
+On the left sidebar:  
+- Select whether you want to enter snowfall in **cm** or **inches**.  
+- Select temperature units (**°C** or **°F**).  
+- Select length units (**cm** or **in**) for geometry inputs like panel height.  
+Pick units that match your data source so you don’t have to convert later.
+
+**B) Enter Monthly Data**  
+There are two main tables on the page:
+
+**POA Irradiation (solar resource)**  
+This is the monthly solar energy the panels receive, measured in **kWh/m² per month**.  
+You can enter values manually for each month (Jan to Dec), or import from a CSV file.  
+This tells the tool how much sunlight hits the panels each month.
+
+**C) Weather & Soiling Inputs**  
+For each month (Jan to Dec) enter:  
+- Snowfall total (in the units you selected)  
+- Snow event count (how many times it snowed)  
+- Average relative humidity (%)  
+- Average air temperature  
+- Rain days (how many days it rained that month)  
+- **“Cleaned?”** check the box if panels were manually cleaned  
+These values can be obtained from local weather data (e.g., NOAA or other sources).
+
+**Step 3 – Enter System Geometry**  
+Below the tables, enter:  
+- Surface tilt angle (degrees), how steep the array is  
+- Slant height, height along the panel plane  
+- Lower edge height, clearance above ground  
+- String factor, electrical sensitivity (1.0 is normal, 0.75 if partial shading has bigger impact)  
+These values help the tool understand how snow will accumulate or shed.
+
+**Step 4 – Optional: Load a CSV**  
+You can upload a CSV file with columns for monthly weather and irradiation.  
+The app will prefill the tables for you.  
+There’s also a CSV template you can download if you want to prepare data externally.
+
+**Step 5 – Run the Model**  
+Once all required fields are filled, click **Run model**.  
+This tells the tool to compute **Snow loss (%)**, **Soiling loss (%)**, and **Final (maximum) loss (%)** for each month.
+
+**Step 6 – View Results**  
+After running, you will see:  
+- A table showing monthly losses from snow, soiling, and the final dominant effect  
+- A stacked bar chart showing how snow and soiling contribute to total monthly losses  
+This helps you visually identify when losses are highest.
+
+**Step 7 – Download Results**  
+Below the chart, you can download:  
+- **Results CSV** (monthly loss percentages)  
+- **Inputs Used CSV** (exact inputs used for calculations, useful for reporting and reproducibility)
+""")
 )
 
 # --- Transition text ---
