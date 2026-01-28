@@ -551,3 +551,13 @@ if "last_inputs_df" in st.session_state and st.session_state["last_inputs_df"] i
         mime="text/csv",
         key="dl_inputs"
     )
+
+st.markdown("### References")
+
+st.markdown("""
+1. Townsend, Tim & Powers, Loren. (2011). *Photovoltaics and snow: An update from two winters of measurements in the SIERRA.* 37th IEEE Photovoltaic Specialists Conference, Seattle, WA, USA. DOI: 10.1109/PVSC.2011.6186627
+
+2. Townsend, T. and Previtali, J. (2023). *A Fresh Dusting: Current Uses of the Townsend Snow Model.* In “Photovoltaic Reliability Workshop (PVRW) 2023 Proceedings: Posters.”, ed. Silverman, T. J. Dec. 2023. NREL/CP-5900-87918. Available at: https://www.nrel.gov/docs/fy25osti/90585.pdf
+
+3. Townsend, T. (2013). *Predicting PV Energy Loss Caused by Snow.* Solar Power International, Chicago IL. DOI: 10.13140/RG.2.2.14299.68647
+""")
