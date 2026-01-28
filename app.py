@@ -57,6 +57,27 @@ st.markdown(
     "a simple precipitation-aware soiling progression (with a manual-clean toggle) to produce stacked "
     "monthly loss percentages one can use in EPC financials and O&M planning."
 )
+with st.sidebar:
+    st.subheader("📘 How to Use")
+    st.markdown("""
+**1) Open the Tool**  
+Use any modern browser.
+
+**2) Enter Inputs**  
+Choose units, then enter 12 monthly POA values and weather inputs (snow, events, RH, temp, rain days, cleaned).
+
+**3) Enter Geometry**  
+Tilt, slant height, lower edge height, and string factor.
+
+**4) Optional CSV Upload**  
+Upload a CSV to prefill tables.
+
+**5) Run Model**  
+Click **Run model** to compute snow, soiling, and final loss.
+
+**6) View & Download**  
+Review the table and chart, then download Results and Inputs CSV files.
+""")
 
 st.markdown("### References")
 
