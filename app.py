@@ -493,8 +493,8 @@ if run:
 
             out = pd.DataFrame({
                 "month": MONTHS,
-                # "Snow loss (%)": np.round(snow_pct, 2),
-                # "Soil loss (%)": np.round(soil_post_pct, 2),
+                "Snow loss (%)": np.round(snow_pct, 2),
+                "Soil loss (%)": np.round(soil_post_pct, 2),
                 "Total loss (%)": np.round(final_pct, 2),
             }).iloc[:12]
             out["order"] = out["month"].map(MONTH_ORDER)
@@ -527,21 +527,32 @@ if "results_out_df" in st.session_state and st.session_state["results_out_df"] i
     st.subheader("Results (percent)")
     st.dataframe(out, use_container_width=True)
 
-    chart_df = out[["month","Snow loss (%)","Soil loss (%)"]].copy()
+    # chart_df = out[["month","Snow loss (%)","Soil loss (%)"]].copy()
+    # chart_df["month"] = pd.Categorical(chart_df["month"], categories=MONTHS, ordered=True)
+    # chart_long = chart_df.melt("month", var_name="series", value_name="value")
+
+    # color_scale = alt.Scale(domain=["Snow loss (%)","Soil loss (%)"],
+    #                         range=["#1f77b4", "#b08d57"])
+
+    # stacked = alt.Chart(chart_long).mark_bar().encode(
+    #     x=alt.X('month:N', sort=MONTHS, title='Month'),
+    #     y=alt.Y('value:Q', title='Loss (%)', stack='zero'),
+    #     color=alt.Color('series:N', scale=color_scale, title=None),
+    #     tooltip=['month','series','value']
+    # )
+    # st.altair_chart(stacked, use_container_width=True)
+
+    chart_df = out[["month", "Total loss (%)"]].copy()
     chart_df["month"] = pd.Categorical(chart_df["month"], categories=MONTHS, ordered=True)
-    chart_long = chart_df.melt("month", var_name="series", value_name="value")
-
-    color_scale = alt.Scale(domain=["Snow loss (%)","Soil loss (%)"],
-                            range=["#1f77b4", "#b08d57"])
-
-    stacked = alt.Chart(chart_long).mark_bar().encode(
-        x=alt.X('month:N', sort=MONTHS, title='Month'),
-        y=alt.Y('value:Q', title='Loss (%)', stack='zero'),
-        color=alt.Color('series:N', scale=color_scale, title=None),
-        tooltip=['month','series','value']
+    
+    total_bar = alt.Chart(chart_df).mark_bar().encode(
+        x=alt.X("month:N", sort=MONTHS, title="Month"),
+        y=alt.Y("Total loss (%):Q", title="Total loss (%)"),
+        tooltip=["month", "Total loss (%)"]
     )
-    st.altair_chart(stacked, use_container_width=True)
-
+    
+    st.altair_chart(total_bar, use_container_width=True)
+    
     st.download_button(
         "Download Results CSV",
         data=out.to_csv(index=False),
