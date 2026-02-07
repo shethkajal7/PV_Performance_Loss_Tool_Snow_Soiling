@@ -570,6 +570,33 @@ if "last_inputs_df" in st.session_state and st.session_state["last_inputs_df"] i
         key="dl_inputs"
     )
 
+from pathlib import Path
+
+st.divider()
+st.subheader("📄 Technical Documentation")
+
+st.markdown(
+    """
+Download the technical documentation for Townsend’s monthly snow loss model,
+including equations, ground-interference term, tracking guidance, bifacial guidance,
+and the string-factor discussion.
+"""
+)
+
+pdf_path = Path(__file__).parent / "SnowModelTheory.pdf"
+
+if pdf_path.exists():
+    with open(pdf_path, "rb") as f:
+        st.download_button(
+            label="Download Snow Model Theory (PDF)",
+            data=f,
+            file_name="SnowModelTheory.pdf",
+            mime="application/pdf"
+        )
+else:
+    st.warning("SnowModelTheory.pdf was not found in the deployed app folder.")
+
+
 st.markdown("### References")
 
 st.markdown("""
