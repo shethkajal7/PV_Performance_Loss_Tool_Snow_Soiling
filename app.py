@@ -466,9 +466,30 @@ if run:
 
             rain_days = w_sorted["rain_days"].astype(float).to_numpy()
             cleaned_flags = w_sorted["cleaned"].astype(bool).to_numpy()
-            _, soil_post_pct = compute_soil_losses(rain_days, cleaned_flags)
 
-            final_pct = np.maximum(snow_pct, soil_post_pct)
+            _, soil_post_pct = compute_soil_losses(rain_days, cleaned_flags)
+            
+            # Combine snow + dust losses with a 3% snow threshold:
+            # - If snow >= 3%, use snow only (ignore dust)
+            # - If snow == 0%, use dust only
+            # - If 0% < snow < 3%, use orthogonal combination: A + B - A*B (A,B as fractions)
+            snow_threshold_pct = 3.0
+            eps = 1e-12  # protects "== 0" comparisons
+            
+            A = snow_pct / 100.0          # fractional snow loss
+            B = soil_post_pct / 100.0     # fractional dust loss
+            combined_pct = 100.0 * (A + B - (A * B))
+            
+            final_pct = np.where(
+                snow_pct >= snow_threshold_pct,
+                snow_pct,
+                np.where(
+                    snow_pct <= eps,
+                    soil_post_pct,
+                    combined_pct
+                )
+            )
+
 
             out = pd.DataFrame({
                 "month": MONTHS,
