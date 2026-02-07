@@ -493,9 +493,9 @@ if run:
 
             out = pd.DataFrame({
                 "month": MONTHS,
-                "Snow loss (%)": np.round(snow_pct, 2),
-                "Soil loss (%)": np.round(soil_post_pct, 2),
-                "Final loss (%)": np.round(final_pct, 2),
+                # "Snow loss (%)": np.round(snow_pct, 2),
+                # "Soil loss (%)": np.round(soil_post_pct, 2),
+                "Total loss (%)": np.round(final_pct, 2),
             }).iloc[:12]
             out["order"] = out["month"].map(MONTH_ORDER)
             out = out.sort_values("order").drop(columns=["order"]).iloc[:12]
