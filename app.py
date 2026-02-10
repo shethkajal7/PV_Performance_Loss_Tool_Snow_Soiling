@@ -74,7 +74,13 @@ Upload a CSV to prefill tables.
 
 **5) Run Model**  
 Click **Run model** to compute snow, soiling, and final loss.
-
+st.divider()
+run = st.button("▶️ Run model", help="Compute snow & soil losses")
+st.caption(
+    "Combining snow and dust losses: If monthly snow loss is ≥ 3%, snow governs and dust loss is ignored. "
+    "If snow loss is 0%, dust loss is the only loss. If 0% < snow loss < 3%, losses are combined as "
+    "A + B − (A × B), where A is fractional snow loss and B is fractional dust loss."
+)
 **6) View & Download**  
 Review the table and chart, then download Results and Inputs CSV files.
 """)
