@@ -609,7 +609,7 @@ st.caption(
     "designed with support for bifacial PV systems and detailed monthly inputs."
 )
 
-st.caption("Reference: https://pv-snow-soiling-losses.streamlit.app/")
+st.caption("Reference: https://townsendsnowdustmodel.streamlit.app/")
 
 st.markdown("### References")
 
