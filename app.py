@@ -599,14 +599,17 @@ if pdf_path.exists():
         )
 else:
     st.warning("SnowModelTheory.pdf was not found in the deployed app folder.")
-st.caption("**Advanced Bifacial PV Snow & Soiling Loss Calculator (Townsend Model)**")
+st.markdown(
+    "<p style='font-size:18px; font-weight:bold;'>Advanced Bifacial PV Snow & Soiling Loss Calculator (Townsend Model)</p>",
+    unsafe_allow_html=True
+)
 
 st.caption(
     "An engineering-based tool for estimating photovoltaic performance losses due to snow cover and environmental soiling, "
     "designed with support for bifacial PV systems and detailed monthly inputs."
 )
 
-st.caption("**Reference tool**: https://pv-snow-soiling-losses.streamlit.app/")
+st.caption("Reference: https://pv-snow-soiling-losses.streamlit.app/")
 
 st.markdown("### References")
 
