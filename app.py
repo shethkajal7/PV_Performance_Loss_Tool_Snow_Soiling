@@ -22,6 +22,36 @@ from pvlib.snow import loss_townsend
 
 st.set_page_config(page_title="Solar PV Performance Loss", page_icon="❄️", layout="wide")
 
+st.markdown(
+    """
+    <style>
+    .stApp {
+        background: linear-gradient(180deg, #f6fbff 0%, #ffffff 100%);
+    }
+
+    section[data-testid="stSidebar"] {
+        background-color: #edf5fb;
+    }
+
+    h1, h2, h3 {
+        color: #103b5c;
+    }
+
+    div[data-testid="stMarkdownContainer"] p {
+        color: #1f2937;
+        font-size: 16px;
+        line-height: 1.6;
+    }
+
+    .block-container {
+        padding-top: 2rem;
+        padding-bottom: 2rem;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
+
 st.title("Solar PV Performance Loss Modelling Application: Snow & Soiling Loss (Monthly)")
 
 # --- Hero image (half size) just below the title ---
