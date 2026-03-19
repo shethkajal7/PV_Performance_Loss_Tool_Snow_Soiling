@@ -110,6 +110,11 @@ Review the table and chart, then download Results and Inputs CSV files.
 st.markdown("""
     <style>
       .attrib { font-size: 1.5rem; line-height: 1.8; opacity: 0.9; }
+      .attrib {
+    font-size: 1.5rem;
+    line-height: 1.8;
+    opacity: 0.9;
+}
     </style>
 """, unsafe_allow_html=True)
 MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
