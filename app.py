@@ -84,7 +84,7 @@ st.markdown(
     "and O&M decisions. Soiling is dynamic and seasonal; losses during high-irradiance months "
     "hit hardest, and the right cleaning cadence balances cost against energy recovery. Use the "
     "tool below to convert those principles into numbers: it applies pvlib’s Townsend snow model and "
-    "a simple precipitation-aware soiling progression (with a manual-clean toggle) to produce stacked "
+    "the Townsend precipitation-driven dust model (with seasonal ramp rates and optional wash optimization) to produce stacked "
     "monthly loss percentages one can use in EPC financials and O&M planning."
 )
 with st.sidebar:
@@ -94,7 +94,7 @@ with st.sidebar:
 Use any modern browser.
 
 **2) Enter Inputs**  
-Choose units, then enter 12 monthly POA values and weather inputs (snow, events, RH, temp, rain days, cleaned).
+Choose units, then enter 12 monthly POA values and weather inputs (snow, events, RH, temp, precipitation).
 
 **3) Enter Geometry**  
 Tilt, slant height, lower edge height, and string factor.
@@ -103,7 +103,7 @@ Tilt, slant height, lower edge height, and string factor.
 Upload a CSV to prefill tables.
 
 **5) Run Model**  
-Click **Run model** to compute snow, soiling, and final loss.
+Click **Run model** to compute snow, dust, and final loss.
 **6) View & Download**  
 Review the table and chart, then download Results and Inputs CSV files.
 """)
@@ -176,6 +176,8 @@ with st.sidebar:
 - snow_events        (FLOAT allowed)
 - relative_humidity_pct
 - temp_air_c or temp_air_f
+- precip
+Legacy columns still accepted (ignored by dust calculation):
 - rain_days
 - cleaned   (true/false or 1/0)
 """
@@ -192,21 +194,21 @@ def preset_frames(preset_name:str, snow_unit:str, temp_unit:str):
         temps_c =   [-2, 1,  5, 11, 16, 21, 24, 24, 20, 14, 7,  1]
         rh =        [70,68,65, 60, 60, 62, 65, 66, 65, 67, 69, 71]
         events =    [3.0, 3.0, 2.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 2.0, 3.0]
-        rain_days = [6, 5, 4, 5, 6, 7, 7, 6, 5, 6, 6, 6]
+        precip =    [2.8, 2.4, 2.1, 2.5, 3.2, 3.8, 4.1, 3.7, 3.1, 2.9, 2.7, 2.6]
     elif preset_name == "Cold winter (example)":
         poa_vals = [60,85,120,150,175,185,180,170,140,110,75,55]
         snow_cm =   [35,32,28, 15,  2,  0,  0,  0,  3, 12, 25,38]
         temps_c =   [-10,-6,-2,  5, 12, 18, 21, 20, 15,  8,  0,-7]
         rh =        [74,73,70, 65, 63, 64, 66, 67, 68, 70, 72, 74]
         events =    [6.0, 6.0, 5.0, 3.0, 1.0, 0.0, 0.0, 0.0, 1.0, 3.0, 5.0, 6.0]
-        rain_days = [7, 6, 6, 7, 8, 9, 9, 7, 7, 8, 8, 7]
+        precip =    [1.8, 1.7, 1.9, 2.3, 2.8, 3.3, 3.6, 3.1, 2.5, 2.2, 2.0, 1.9]
     else:
         poa_vals = [120.0]*12
         snow_cm  = [0.0]*12
         temps_c  = [0.0]*12
         rh       = [60.0]*12
         events   = [0.0]*12
-        rain_days= [0.0]*12
+        precip   = [0.0]*12
 
     snow_disp = snow_cm if snow_unit=="cm" else [round(x/2.54,3) for x in snow_cm]
     temps_disp = temps_c if temp_unit=="°C" else [round(x*9/5+32,3) for x in temps_c]
@@ -218,8 +220,7 @@ def preset_frames(preset_name:str, snow_unit:str, temp_unit:str):
         "snow_events": events,
         "relative_humidity_pct": rh,
         f"temp_air_{'c' if temp_unit=='°C' else 'f'}": temps_disp,
-        "rain_days": rain_days,
-        "cleaned": [False]*12,
+        "precip": precip,
     }).iloc[:12]
     return poa_df, weather
 
@@ -290,17 +291,15 @@ def read_csv_upload(file, snow_unit:str, temp_unit:str):
         else:
             w[f"temp_air_{'c' if temp_unit=='°C' else 'f'}"] = [0.0]*12
 
-        if has("rain_days"):
+        if has("precip"):
+            vals = pd.to_numeric(df[cols["precip"]], errors="coerce").fillna(0.0).tolist()
+            w["precip"] = pad12(vals, 0.0)
+        elif has("rain_days"):
+            # Legacy fallback for older CSVs so they still load without breaking.
             vals = pd.to_numeric(df[cols["rain_days"]], errors="coerce").fillna(0.0).tolist()
-            w["rain_days"] = pad12(vals, 0.0)
+            w["precip"] = pad12(vals, 0.0)
         else:
-            w["rain_days"] = [0.0]*12
-
-        if has("cleaned"):
-            vals = _to_bool_series(df[cols["cleaned"]]).tolist()
-            w["cleaned"] = pad12(vals, False)
-        else:
-            w["cleaned"] = [False]*12
+            w["precip"] = [0.0]*12
 
         return poa_df_u.iloc[:12], w.iloc[:12]
     except Exception as e:
@@ -323,8 +322,7 @@ if download_tmpl:
         "snow_events": [0.0]*12,
         "relative_humidity_pct": [60.0]*12,
         "temp_air_c": [0.0]*12,
-        "rain_days": [0.0]*12,
-        "cleaned": [False]*12,
+        "precip": [0.0]*12,
     })
     buf = io.StringIO()
     tmpl.to_csv(buf, index=False)
@@ -386,9 +384,43 @@ poa_global_kwhm2 = poa_editor_sorted["POA_global_kwhm2"].astype(float).to_numpy(
 # -----------------------------
 st.subheader("2) Monthly Weather & Soiling Inputs")
 
+st.subheader("2A) Dust Model Settings")
+
+c_d1, c_d2 = st.columns([1, 1])
+with c_d1:
+    precip_unit = st.radio("Precipitation unit", ["in", "mm"], horizontal=True, index=0)
+with c_d2:
+    manual_washes = st.radio("Manual washes per year", [0, 1, 2], horizontal=True, index=0)
+
+RAMP_RATE_OPTIONS = {
+    "Typical (0.10)": 0.10,
+    "Ultra sandy (0.025)": 0.025,
+    "Desert (0.05)": 0.05,
+    "Humid/agri./sooty/birds (0.15)": 0.15,
+}
+
+c_r1, c_r2, c_r3, c_r4 = st.columns(4)
+with c_r1:
+    ramp_dec_feb = RAMP_RATE_OPTIONS[
+        st.selectbox("Dec–Feb ramp (%/day)", list(RAMP_RATE_OPTIONS.keys()), index=0)
+    ]
+with c_r2:
+    ramp_mar_may = RAMP_RATE_OPTIONS[
+        st.selectbox("Mar–May ramp (%/day)", list(RAMP_RATE_OPTIONS.keys()), index=0)
+    ]
+with c_r3:
+    ramp_jun_aug = RAMP_RATE_OPTIONS[
+        st.selectbox("Jun–Aug ramp (%/day)", list(RAMP_RATE_OPTIONS.keys()), index=0)
+    ]
+with c_r4:
+    ramp_sep_nov = RAMP_RATE_OPTIONS[
+        st.selectbox("Sep–Nov ramp (%/day)", list(RAMP_RATE_OPTIONS.keys()), index=0)
+    ]
+
+
 st.info(
     "### Get monthly climate data\n"
-    "Please retrieve monthly values (snowfall, temperature, RH, rain days, etc.) from:\n\n"
+    "Please retrieve monthly values (snowfall, temperature, RH, precipitation, etc.) from:\n\n"
     "• **NOWData – NOAA Online Weather Data**: "
     "[sercc.com/noaa-online-weather](https://sercc.com/noaa-online-weather/)\n\n"
     "After you gather values for your station and year, paste them into the table below."
@@ -401,8 +433,7 @@ colcfg = {
     "snow_events": st.column_config.NumberColumn("snow_events (float)"),
     "relative_humidity_pct": st.column_config.NumberColumn("relative_humidity (%)", min_value=0.0, max_value=100.0),
     f"temp_air_{'c' if temp_unit=='°C' else 'f'}": st.column_config.NumberColumn(f"temp_air ({temp_unit})"),
-    "rain_days": st.column_config.NumberColumn("rain_days", min_value=0.0, max_value=31.0),
-    "cleaned": st.column_config.CheckboxColumn("manually cleaned?"),
+    "precip": st.column_config.NumberColumn(f"precip ({precip_unit})", min_value=0.0),
 }
 weather_editor = st.data_editor(
     weather_df, use_container_width=True, num_rows="fixed", column_config=colcfg, hide_index=True
@@ -420,7 +451,7 @@ def validate_inputs(poa, wdf, snow_unit, temp_unit) -> List[str]:
             errs.append(f"POA value for {MONTHS[i]} is negative.")
     req_cols = ["month", "snow_events", "relative_humidity_pct",
                 f"snow_total_{snow_unit}", f"temp_air_{'c' if temp_unit=='°C' else 'f'}",
-                "rain_days", "cleaned"]
+                "precip"]
     for c in req_cols:
         if c not in wdf.columns:
             errs.append(f"Missing column: {c}")
@@ -429,25 +460,214 @@ def validate_inputs(poa, wdf, snow_unit, temp_unit) -> List[str]:
         if len(bad)>0: errs.append("Relative humidity must be 0–100%.")
     if (wdf[f"snow_total_{snow_unit}"]<0).any():
         errs.append("snow_total cannot be negative.")
-    if "rain_days" in wdf.columns and (wdf["rain_days"]<0).any():
-        errs.append("rain_days must be ≥ 0.")
+    if "precip" in wdf.columns and (wdf["precip"]<0).any():
+        errs.append("precip must be ≥ 0.")
     return errs
 
 # -----------------------------
 # Soiling helpers
 # -----------------------------
-def compute_soil_losses(rain_days, cleaned_flags):
-    pre = np.zeros(12, dtype=float)
-    post = np.zeros(12, dtype=float)
-    prev_post = 0.75
-    for i in range(12):
-        if rain_days[i] >= 1:
-            pre[i] = 0.75
+DAYS_IN_MONTH = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+
+def _clamp(x, lo, hi):
+    return max(lo, min(hi, x))
+
+def _seasonal_ramps(ramp_dec_feb, ramp_mar_may, ramp_jun_aug, ramp_sep_nov):
+    r = [0.0] * 12
+    for i in [11, 0, 1]:
+        r[i] = float(ramp_dec_feb)
+    for i in [2, 3, 4]:
+        r[i] = float(ramp_mar_may)
+    for i in [5, 6, 7]:
+        r[i] = float(ramp_jun_aug)
+    for i in [8, 9, 10]:
+        r[i] = float(ramp_sep_nov)
+    return r
+
+def _precip_in_inches(precip, units):
+    if units.lower() == "in":
+        return [float(v) for v in precip]
+    if units.lower() == "mm":
+        return [float(v) / 25.4 for v in precip]
+    raise ValueError("precip units must be 'in' or 'mm'.")
+
+def compute_dust_baseline_pct_mono(precip_in, ramps, snow_loss_pct):
+    max_p = max(precip_in)
+    start_idx = precip_in.index(max_p)
+    start_snow = float(snow_loss_pct[start_idx])
+
+    if start_snow >= 3.0:
+        start_soil = 0.0
+    else:
+        if max_p >= 4.0:
+            start_soil = 0.0
+        elif max_p >= 2.0:
+            start_soil = 1.0
         else:
-            pre[i] = prev_post + 1.5
-        post[i] = 0.75 if cleaned_flags[i] else pre[i]
-        prev_post = post[i]
-    return pre, post
+            start_soil = 2.0
+
+    mtype = [""] * 12
+    inc = [0.0] * 12
+    fixed = [0.0] * 12
+
+    for i in range(12):
+        if i == start_idx:
+            mtype[i] = "Start"
+        else:
+            mtype[i] = "Const." if precip_in[i] >= 2.0 else "Additive"
+
+    for i in range(12):
+        if mtype[i] in ("Const.", "Start"):
+            inc[i] = 0.0
+        else:
+            if precip_in[i] < 1.0:
+                inc[i] = DAYS_IN_MONTH[i] * ramps[i]
+            else:
+                prev = (i - 1) % 12
+                if mtype[prev] == "Additive":
+                    inc[i] = 15.0 * ramps[i]
+                else:
+                    inc[i] = 8.0 * ramps[i]
+
+        if mtype[i] == "Const.":
+            if precip_in[i] >= 4.0:
+                fixed[i] = 0.0
+            elif precip_in[i] >= 2.0:
+                fixed[i] = 1.0
+            else:
+                fixed[i] = start_soil
+        else:
+            fixed[i] = start_soil
+
+    base = [0.0] * 12
+    for i in range(12):
+        if snow_loss_pct[i] >= 3.0:
+            soil = 0.0
+        else:
+            if mtype[i] == "Additive":
+                prev = (i - 1) % 12
+                soil = base[prev] + inc[i]
+            elif mtype[i] == "Const.":
+                soil = fixed[i]
+            else:
+                soil = start_soil
+        base[i] = _clamp(soil, 0.0, 30.0)
+
+    return base
+
+def compute_month_only_soil_pct_mono(precip_in, ramps, snow_loss_pct):
+    out = []
+    for i in range(12):
+        if float(snow_loss_pct[i]) >= 3.0:
+            soil = 0.0
+        else:
+            p = float(precip_in[i])
+            r = float(ramps[i])
+            if p >= 4.0:
+                soil = 0.0
+            elif p >= 2.0:
+                soil = 1.0
+            elif p >= 1.0:
+                soil = np.floor(DAYS_IN_MONTH[i] / 2.0) * r
+            else:
+                soil = (DAYS_IN_MONTH[i] / 2.0) * r
+        out.append(_clamp(soil, 0.0, 30.0))
+    return out
+
+def compute_energy_weights_from_poa(poa_kwhm2):
+    total = sum(max(0.0, float(v)) for v in poa_kwhm2)
+    if total <= 0:
+        return [1.0 / 12.0] * 12
+    return [max(0.0, float(v)) / total for v in poa_kwhm2]
+
+def optimize_washes_mono(baseline, month_only, energy_weights, washes):
+    washes = int(max(0, min(2, washes)))
+
+    def score(vec):
+        return sum(float(vec[i]) * float(energy_weights[i]) for i in range(12))
+
+    def cap_against(raw, cap_series):
+        return [min(float(raw[i]), float(cap_series[i])) for i in range(12)]
+
+    def build_1wash_raw(w1):
+        raw = [float(v) for v in baseline]
+        raw[w1] = float(month_only[w1])
+        for m in range(w1 + 1, 12):
+            delta = float(baseline[m]) - float(baseline[m - 1])
+            raw[m] = max(0.0, raw[m - 1] + delta)
+        return raw
+
+    def build_2wash_raw(final1, w2):
+        raw = [float(v) for v in final1]
+        raw[w2] = float(month_only[w2])
+        for m in range(w2 + 1, 12):
+            delta = float(final1[m]) - float(final1[m - 1])
+            raw[m] = max(0.0, raw[m - 1] + delta)
+        return raw
+
+    if washes == 0:
+        return [float(v) for v in baseline], None, None
+
+    raw_candidates_1 = [build_1wash_raw(w) for w in range(12)]
+    final_candidates_1 = [cap_against(r, baseline) for r in raw_candidates_1]
+    scores_1 = [score(r) for r in raw_candidates_1]
+
+    min_s1 = min(scores_1)
+    avg_s1 = sum(scores_1) / len(scores_1)
+
+    if abs(min_s1 - avg_s1) < 1e-12:
+        final1 = [float(v) for v in baseline]
+        best1 = None
+    else:
+        best1_idx = scores_1.index(min_s1)
+        final1 = final_candidates_1[best1_idx]
+        best1 = best1_idx + 1
+
+    if washes == 1:
+        return final1, best1, None
+
+    if best1 is None:
+        return final1, None, None
+
+    w1 = best1 - 1
+    possible_w2 = list(range(w1 + 1, 12))
+    if not possible_w2:
+        return final1, best1, None
+
+    raw_candidates_2 = []
+    final_candidates_2 = []
+    scores_2 = []
+
+    for w2 in possible_w2:
+        raw2 = build_2wash_raw(final1, w2)
+        raw_candidates_2.append((w2, raw2))
+        final2 = cap_against(raw2, final1)
+        final_candidates_2.append(final2)
+        scores_2.append(score(raw2))
+
+    min_s2 = min(scores_2)
+    avg_s2 = sum(scores_2) / len(scores_2)
+
+    if abs(min_s2 - avg_s2) < 1e-12:
+        return final1, best1, None
+
+    best2_local_idx = scores_2.index(min_s2)
+    best2_w2, _ = raw_candidates_2[best2_local_idx]
+    final2 = final_candidates_2[best2_local_idx]
+    best2 = best2_w2 + 1
+
+    return final2, best1, best2
+
+def compute_combined_loss_pct_mono(snow_loss_pct, dust_loss_pct):
+    out = []
+    for s, d in zip(snow_loss_pct, dust_loss_pct):
+        if float(s) >= 3.0:
+            out.append(float(s))
+        else:
+            sf = float(s) / 100.0
+            df = float(d) / 100.0
+            out.append(100.0 * (sf + df - sf * df))
+    return out
 
 # -----------------------------
 # Run & persist results
@@ -547,8 +767,13 @@ if run:
                 "snow_events_float": events,
                 "relative_humidity_pct": rh_pct,
                 "temp_air_c": temp_c,
-                "rain_days": rain_days,
-                "cleaned": cleaned_flags,
+                "precip_input": precip,
+                "precip_unit": [precip_unit] * 12,
+                "manual_washes": [manual_washes] * 12,
+                "ramp_dec_feb": [ramp_dec_feb] * 12,
+                "ramp_mar_may": [ramp_mar_may] * 12,
+                "ramp_jun_aug": [ramp_jun_aug] * 12,
+                "ramp_sep_nov": [ramp_sep_nov] * 12,
                 "slant_height_m": slant_m,
                 "lower_edge_height_m": lower_m,
                 "surface_tilt_deg": surface_tilt,
@@ -564,6 +789,14 @@ if run:
 if "results_out_df" in st.session_state and st.session_state["results_out_df"] is not None:
     out = st.session_state["results_out_df"]
     st.subheader("Results (percent)")
+    if manual_washes == 0:
+        st.caption("Manual washes: None")
+    else:
+        wash1_label = "None" if best_wash_1 is None else f"{best_wash_1} ({MONTHS[best_wash_1-1]})"
+        st.caption(f"Best wash month #1: {wash1_label}")
+        if manual_washes == 2:
+            wash2_label = "None" if best_wash_2 is None else f"{best_wash_2} ({MONTHS[best_wash_2-1]})"
+            st.caption(f"Best wash month #2: {wash2_label}")
     st.dataframe(out, use_container_width=True)
 
     # chart_df = out[["month","Snow loss (%)","Soil loss (%)"]].copy()
