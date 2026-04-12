@@ -178,8 +178,7 @@ with st.sidebar:
 - temp_air_c or temp_air_f
 - precip
 Legacy columns still accepted (ignored by dust calculation):
-- rain_days
-- cleaned   (true/false or 1/0)
+- precip
 """
     up = st.file_uploader("Prefill from CSV (optional)", type=["csv"], help=csv_help)
     download_tmpl = st.checkbox("Show CSV template to download")
@@ -723,31 +722,46 @@ if run:
             )
             snow_pct = 100.0 * snow_frac
 
-            rain_days = w_sorted["rain_days"].astype(float).to_numpy()
-            cleaned_flags = w_sorted["cleaned"].astype(bool).to_numpy()
+            precip = w_sorted["precip"].astype(float).tolist()
+            precip_in = _precip_in_inches(precip, precip_unit)
 
-            _, soil_post_pct = compute_soil_losses(rain_days, cleaned_flags)
-            
-            # Combine snow + dust losses with a 3% snow threshold:
-            # - If snow >= 3%, use snow only (ignore dust)
-            # - If snow == 0%, use dust only
-            # - If 0% < snow < 3%, use orthogonal combination: A + B - A*B (A,B as fractions)
-            snow_threshold_pct = 3.0
-            eps = 1e-12  # protects "== 0" comparisons
-            
-            A = snow_pct / 100.0          # fractional snow loss
-            B = soil_post_pct / 100.0     # fractional dust loss
-            combined_pct = 100.0 * (A + B - (A * B))
-            
-            final_pct = np.where(
-                snow_pct >= snow_threshold_pct,
-                snow_pct,
-                np.where(
-                    snow_pct <= eps,
-                    soil_post_pct,
-                    combined_pct
-                )
+            ramps = _seasonal_ramps(
+                ramp_dec_feb=ramp_dec_feb,
+                ramp_mar_may=ramp_mar_may,
+                ramp_jun_aug=ramp_jun_aug,
+                ramp_sep_nov=ramp_sep_nov,
             )
+
+            baseline_dust_pct = compute_dust_baseline_pct_mono(
+                precip_in=precip_in,
+                ramps=ramps,
+                snow_loss_pct=snow_pct.tolist(),
+            )
+
+            month_only_dust_pct = compute_month_only_soil_pct_mono(
+                precip_in=precip_in,
+                ramps=ramps,
+                snow_loss_pct=snow_pct.tolist(),
+            )
+
+            energy_weights = compute_energy_weights_from_poa(poa_global_kwhm2.tolist())
+
+            soil_post_pct, best_wash_1, best_wash_2 = optimize_washes_mono(
+                baseline=baseline_dust_pct,
+                month_only=month_only_dust_pct,
+                energy_weights=energy_weights,
+                washes=manual_washes,
+            )
+
+            final_pct = np.array(
+                compute_combined_loss_pct_mono(
+                    snow_loss_pct=snow_pct.tolist(),
+                    dust_loss_pct=soil_post_pct,
+                ),
+                dtype=float
+            )
+
+            soil_post_pct = np.array(soil_post_pct, dtype=float)
 
 
             out = pd.DataFrame({
