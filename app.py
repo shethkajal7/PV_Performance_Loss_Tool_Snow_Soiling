@@ -383,8 +383,6 @@ poa_global_kwhm2 = poa_editor_sorted["POA_global_kwhm2"].astype(float).to_numpy(
 # -----------------------------
 st.subheader("2) Monthly Weather & Soiling Inputs")
 
-st.subheader("2A) Dust Model Settings")
-
 c_d1, c_d2 = st.columns([1, 1])
 with c_d1:
     precip_unit = st.radio("Precipitation unit", ["in", "mm"], horizontal=True, index=0)
