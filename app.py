@@ -53,7 +53,8 @@ st.markdown(
 )
 
 st.title("Solar PV Performance Loss Modelling Application: Snow & Soiling Loss (Monthly)")
-
+st.markdown('<p class="attrib"> Webpage Author <b>Kajal Sheth </b> 😊</p>',
+            unsafe_allow_html=True)
 # --- Hero image (half size) just below the title ---
 from pathlib import Path
 try:
